@@ -34,6 +34,8 @@ import de.switchbetweensrcandtest.preference.PreferenceConstance;
 public class SwitchAction implements IWorkbenchWindowActionDelegate {
 	private IWorkbenchWindow window;
 	private IPreferenceStore preferenceStore;
+	private String javaPath;
+	private String testPath;
 	/**
 	 * The constructor.
 	 */
@@ -95,38 +97,53 @@ public class SwitchAction implements IWorkbenchWindowActionDelegate {
 	public void init(IWorkbenchWindow window) {
 		this.window = window;
 		preferenceStore = Activator.getDefault().getPreferenceStore();
+		initialzeOptions();
 	}
 	
 	private String getAssociatedFile(IPath fullPath) {
-		String javaPath = preferenceStore.getString(PreferenceConstance.JAVA_PATH);
-		String testPath = preferenceStore.getString(PreferenceConstance.TEST_PATH);
-		
+		initialzeOptions();
 		String uriString = fullPath.toString();
 		String name = fullPath.lastSegment();
 		if (isJavaFileName(name)){
 			if (isTestFile(name)) {
-				String replaceFirst = uriString.replaceFirst(testPath, javaPath);
-				return replaceFirst.replace("Test", "");
+				return testToSourceFilename(uriString);
 			} else {
-				String replaceFirst = uriString.replaceFirst(javaPath, testPath);
-				String string = preferenceStore.getString(PreferenceConstance.TEST_PREFIX);
-				boolean isPrefix = Boolean.parseBoolean(string);
-				if (isPrefix){
-					return replaceFirst.replace(name, "Test" + name);				
-				} else {
-					return replaceFirst.replace(".java", "Test.java");
-				}
+				return sourceToTestFilename(uriString,name);
 			}
 		} else {
 			throw new IllegalArgumentException(fullPath + " is not a java source file.");
 		}
 	}
 	
-	private static boolean isJavaFileName(String fileName) {
+	private void initialzeOptions() {
+		javaPath = preferenceStore.getString(PreferenceConstance.JAVA_PATH);
+		testPath = preferenceStore.getString(PreferenceConstance.TEST_PATH);
+	}
+
+	private String testToSourceFilename(String uriString) {
+		String replaceFirst = uriString.replaceFirst(testPath, javaPath);
+		return replaceFirst.replace("Test", "");
+	}
+
+	private String sourceToTestFilename(String uri,String name) {
+		String replaceFirst = uri.replaceFirst(javaPath, testPath);
+		if (isPrefixMode()){
+			return replaceFirst.replace(name, "Test" + name);				
+		} else {
+			return replaceFirst.replace(".java", "Test.java");
+		}
+	}
+
+	private boolean isPrefixMode() {
+		String prefix = preferenceStore.getString(PreferenceConstance.TEST_PREFIX);
+		return Boolean.parseBoolean(prefix);
+	}
+	
+	private boolean isJavaFileName(String fileName) {
 		return fileName.endsWith(".java");
 	}
 	
-	private static boolean isTestFile(String file) {
+	private boolean isTestFile(String file) {
 		return (file.contains("Test"));
 	}
 	
